@@ -99,7 +99,8 @@ class PsMatch:
             )
 
         pipe.fit(self.input_data, self.label)
-        pipe.predict_proba(self.input_data)[:, 1]
+        ps_score = pipe.predict_proba(self.input_data)[:, 1]
+        pipe.predict_log_proba(self.input_data)[:, 1]
 
         # data_with_ps = self.data.assign(propensity_score=model.predict_proba(x_transformed)[:, 1])
         # data_with_ps['log_propensity_score'] = np.array([self.logit(x) for x in data_with_ps['propensity_score']])

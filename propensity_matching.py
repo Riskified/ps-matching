@@ -1,4 +1,6 @@
 # get relevant packages
+from typing import List
+
 import pandas as pd
 import numpy as np
 import math
@@ -25,17 +27,15 @@ class PsMatch:
         categorical_columns : list
             List of categorical variables
     """
-    def __init__(self, data, group, minority_class_in_group, categorical_columns):
+    def __init__(self, data: pd.DataFrame, group: str, minority_class_in_group: str, categorical_columns: List[str]):
         self.data = data
         self.group = group
         self.minority_class_in_group = minority_class_in_group
         self.categorical_columns = categorical_columns
-        self.n_observations = data.shape[0]
+        self.n_observations: int = len(data)
         print('loaded data with {} observations'.format(self.n_observations))
 
-        self.data['{}_logical'.format(self.group)] = self.data[self.group].apply(
-            lambda x: True if x == self.minority_class_in_group else False
-        )
+        self.data[f'{self.group}_logical'] = self.data[self.group] == self.minority_class_in_group
         self.logical_column_name = self.data[['{}_logical'.format(self.group)]].columns[0]
         self.matched_data = None
         print('The minority class contains {} observations'.format(
@@ -45,6 +45,7 @@ class PsMatch:
     def transform_categorical_columns(self):
         ct = ColumnTransformer([("onehot", OneHotEncoder(sparse=False, drop="first"), self.categorical_columns)],
                                remainder='drop')
+        # todo: change remainder='passthrough'
         x_data = self.data.drop([self.group, self.logical_column_name], axis=1)
         x_categorical = x_data[self.categorical_columns]
         x_other = x_data.drop(self.categorical_columns, axis=1)

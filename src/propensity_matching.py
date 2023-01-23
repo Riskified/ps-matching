@@ -4,7 +4,7 @@ from pandas import DataFrame, Series, concat, read_csv
 from sklearn.base import BaseEstimator
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils.validation import check_is_fitted
 
@@ -17,13 +17,12 @@ CLF_PARAMS = {
 
 
 class PrepData:
-    label = Series(dtype=bool)
-    minority_class_in_group: str
+    group_label = Series(dtype=bool)
 
-    def __init__(self, file_path: str, group):
-        data: DataFrame = read_csv(file_path)
-        self.input_data = data.drop(group, axis=1)
-        self.group_data = data[group]
+    def __init__(self, file_path: str, group: str, index_col: str):
+        data: DataFrame = read_csv(file_path, index_col=index_col)
+        self.input_data: DataFrame = data.drop(group, axis=1)
+        self.group_data: Series = data[group]
         print(f'loaded data with {len(data)} observations')
         self.create_label()
 
@@ -31,12 +30,10 @@ class PrepData:
         return self.group_data.value_counts().tail(1).index[0]
 
     def create_label(self):
-        self.label: Series = self.group_data == self.get_minority_class()
-        self.label.name = f'{self.group_data.name}_logical'
-        print(self.label.value_counts(normalize=True))
-        print(
-            f'The minority class contains {self.label.value_counts()[True]} observations'
-            )  # [self.get_minority_class()]
+        self.group_label: Series = self.group_data == self.get_minority_class()
+        self.group_label.name: str = f'{self.group_data.name}_logical'
+        print(self.group_label.value_counts(normalize=True))
+        print(f'The minority class contains {(self.group_label == True).sum()} observations')
 
 
 class PScorer(BaseEstimator):

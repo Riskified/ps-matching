@@ -1,12 +1,10 @@
-from tqdm import tqdm
 from numpy import random
 from pandas import DataFrame, Series
-from sklearn.base import BaseEstimator
-from sklearn.utils.validation import check_is_fitted
+from tqdm import tqdm
 
 
 class ObsMatcher:
-    def __init__(self, p_scorer: BaseEstimator, n_matches: int, caliper: float):
+    def __init__(self, n_matches: int, caliper: float):
         """
             create_match_df method -- finds similar observations and match between intervention and control
             Parameters
@@ -18,24 +16,19 @@ class ObsMatcher:
             :return
                 matched Dataframe
         """
-        if check_is_fitted(p_scorer) is False:
-            raise ModuleNotFoundError
-        self.p_scorer = p_scorer
         self.n_matches = n_matches
         self.caliper = caliper
 
-    def create_match_df(self, data: DataFrame, label):
+    def match_scores(self, p_scores: DataFrame, label):
 
-        data['propensity_score'] = self.p_scorer.predict(data)
-        intervention_group: Series = data[label]['propensity_score']
-        control_group: Series = data[~label]['propensity_score']
+        intervention_group: Series = p_scores[label]
+        control_group: Series = p_scores[~label]
 
         result, match_ids = [], []
         print('starting matching process, this might take a time')
 
         for i in tqdm(range(len(intervention_group))):
             score = intervention_group.iloc[i]
-
             # todo: add potential matches according to caliper
             matches: Series = abs(control_group - score).sort_values()
             in_caliper: Series = matches <= self.caliper
@@ -54,7 +47,7 @@ class ObsMatcher:
             result.extend([intervention_group.index[i]] + list(chosen))
             match_ids.extend([i] * (len(chosen) + 1))
 
-        matched_data = data.loc[result]
+        matched_data = p_scores.loc[result]
         matched_data['match_id'] = match_ids
         matched_data['record_id'] = matched_data.index
 

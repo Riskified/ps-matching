@@ -1,21 +1,47 @@
-# get relevant packages
 from typing import List
-import math
-
-from numpy import array
-from pandas import DataFrame, Series, concat
+from numpy import log
+from pandas import DataFrame, Series, concat, read_csv
+from sklearn.base import BaseEstimator
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.utils.validation import check_is_fitted
+
+CLF_PARAMS = {
+    "C": 1e4,
+    "class_weight": "balanced",
+    "penalty": "l2",
+    "max_iter": 1000
+    }
 
 
-# pd.options.mode.chained_assignment = None  # default='warn'
+class PrepData:
+    label = Series(dtype=bool)
+    minority_class_in_group: str
+
+    def __init__(self, file_path: str, group):
+        data: DataFrame = read_csv(file_path)
+        self.input_data = data.drop(group, axis=1)
+        self.group_data = data[group]
+        print(f'loaded data with {len(data)} observations')
+        self.create_label()
+
+    def get_minority_class(self):
+        return self.group_data.value_counts().tail(1).index[0]
+
+    def create_label(self):
+        self.label: Series = self.group_data == self.get_minority_class()
+        self.label.name = f'{self.group_data.name}_logical'
+        print(self.label.value_counts(normalize=True))
+        print(
+            f'The minority class contains {self.label.value_counts()[True]} observations'
+            )  # [self.get_minority_class()]
 
 
-class PsMatch:
+class PScorer(BaseEstimator):
     """
-        PsMatch Class -- creates balanced dataset using propensity score matching
+        PScorer Class -- creates balanced dataset using propensity score matching
         Parameters
         ----------
         data : DataFrame
@@ -27,81 +53,30 @@ class PsMatch:
         categorical_columns : list
             List of categorical variables
     """
-    matched_data = DataFrame()
-    label = Series()
-    minority_class_in_group: str
 
-    def __init__(self, data: DataFrame, group, categorical_columns: List[str]):
-        self.input_data = data.drop(group, axis=1)
-        self.group_data = data[group]
-        self.categorical_columns = categorical_columns
-        print(f'loaded data with {len(data)} observations')
-        self.create_label()
-
-    def get_minority_class(self):
-        return self.group_data.value_counts().tail(1).index[0]
-
-    def create_label(self):
-        self.label: Series = self.group_data == self.get_minority_class()
-        self.label.name = f'{self.group_data.name}_logical'
-        print(self.label.value_counts(normalize=True))
-        # print(f'The minority class contains {self.label.value_counts()[self.group]} observations')
-
-    def transform_categorical_columns(self):
+    def __init__(self, categorical_columns):
         ct = ColumnTransformer(
             [
-                ("onehot", OneHotEncoder(sparse=False, drop="first"), self.categorical_columns)],
-            remainder='drop'
-            )
-        # todo: change remainder='passthrough'
-        x_data = self.data.drop([self.group, self.logical_column_name], axis=1)
-        x_categorical = x_data[self.categorical_columns]
-        x_other = x_data.drop(self.categorical_columns, axis=1)
-        x_categorical_transformed = ct.fit_transform(x_categorical)
-        return concat(
-            [x_other, DataFrame(
-                x_categorical_transformed,
-                columns=ct.get_feature_names_out()
-                )], axis=1
-            )
-
-    @staticmethod
-    def logit(p):
-        logit_value = math.log(p / (1 - p))
-        return logit_value
-
-    @staticmethod
-    def fit_ps_model(x_data, y_col):
-        return LogisticRegression(C=1e6).fit(x_data, y_col)
-
-    @staticmethod
-    def predict_ps(data, model):
-        data_with_ps = data.assign(propensity_score=model.predict_proba(data)[:, 1])
-        data_with_ps['log_propensity_score'] = array([PsMatch.logit(x) for x in data_with_ps['propensity_score']])
-
-    # todo: add function that predict on new data
-
-    def get_propensity_score(self):
-        # x_transformed = self.transform_categorical_columns()
-        # model = self.fit_ps_model(x_transformed, self.data[self.logical_column_name])
-
-        ct = ColumnTransformer(
-            [
-                ("onehot", OneHotEncoder(sparse=False, drop="first"), self.categorical_columns)
+                ("onehot", OneHotEncoder(sparse_output=False, drop="first"), categorical_columns)
                 ], remainder='passthrough'
             )
 
-        pipe = Pipeline(
+        self.pipe_ = Pipeline(
             steps=[
                 ('catfeatures', ct),
-                ('clf', LogisticRegression(C=1e6))
+                ('clf', LogisticRegression(**CLF_PARAMS))
                 ]
             )
 
-        pipe.fit(self.input_data, self.label)
-        ps_score = pipe.predict_proba(self.input_data)[:, 1]
-        pipe.predict_log_proba(self.input_data)[:, 1]
+    @staticmethod
+    def logit(ps_score):
+        return log(ps_score / (1 - ps_score))
 
-        # data_with_ps = self.data.assign(propensity_score=model.predict_proba(x_transformed)[:, 1])
-        # data_with_ps['log_propensity_score'] = np.array([self.logit(x) for x in data_with_ps['propensity_score']])
-        # return data_with_ps
+    def fit(self, X, y):
+        self.pipe_.fit(X, y)
+        return self
+
+    def predict(self, X):
+        check_is_fitted(self)
+        ps_score = self.pipe_.predict_proba(X)[:, 1]
+        return self.logit(ps_score)

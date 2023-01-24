@@ -2,14 +2,14 @@ from typing import List
 from numpy import log
 from pandas import DataFrame, Series, concat, read_csv
 from sklearn.base import BaseEstimator
-from sklearn.compose import ColumnTransformer
+from sklearn.compose import ColumnTransformer, make_column_selector, make_column_transformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils.validation import check_is_fitted
 
 CLF_PARAMS = {
-    "C": 1e4,
+    "C": 10,  # 1e4,
     "class_weight": "balanced",
     "penalty": "l2",
     "max_iter": 1000
@@ -18,22 +18,25 @@ CLF_PARAMS = {
 
 class PrepData:
     group_label = Series(dtype=bool)
+    target_label = Series(dtype=bool)
 
-    def __init__(self, file_path: str, group: str, index_col: str):
+    def __init__(self, file_path: str, group: str, target: str, index_col: str):
         data: DataFrame = read_csv(file_path, index_col=index_col)
-        self.input_data: DataFrame = data.drop(group, axis=1)
-        self.group_data: Series = data[group]
+        self.input: DataFrame = data.drop([group, target], axis=1)
         print(f'loaded data with {len(data)} observations')
-        self.create_label()
+        self.group_label = self.create_group_label(data[group])
+        self.target_label = self.create_group_label(data[target])
 
-    def get_minority_class(self):
-        return self.group_data.value_counts().tail(1).index[0]
+    @staticmethod
+    def get_minority_class(label_col) -> str:
+        return label_col.value_counts().tail(1).index[0]
 
-    def create_label(self):
-        self.group_label: Series = self.group_data == self.get_minority_class()
-        self.group_label.name: str = f'{self.group_data.name}_logical'
-        print(self.group_label.value_counts(normalize=True))
-        print(f'The minority class contains {(self.group_label == True).sum()} observations')
+    @staticmethod
+    def create_group_label(label: Series):
+        logical_label: Series = label == PrepData.get_minority_class(label)
+        print(logical_label.value_counts(normalize=True))
+        print(f'The minority class contains {(logical_label == True).sum()} observations')
+        return logical_label
 
 
 class PScorer(BaseEstimator):
@@ -42,7 +45,7 @@ class PScorer(BaseEstimator):
         Parameters
         ----------
         data : DataFrame
-            Data with the group variable and the set of covariatesto be balanced
+            Data with the group variable and the label_col of covariatesto be balanced
         group : str
             The variable that indicates the intervention
         minority_class_in_group : str
@@ -51,19 +54,15 @@ class PScorer(BaseEstimator):
             List of categorical variables
     """
 
-    def __init__(self, categorical_columns):
-        ct = ColumnTransformer(
-            [
-                ("onehot", OneHotEncoder(sparse_output=False, drop="first"), categorical_columns)
-                ], remainder='passthrough'
-            )
+    ct = make_column_transformer(
+        (OneHotEncoder(), make_column_selector(dtype_include=object)),
+        remainder='passthrough'
+        )
 
-        self.pipe_ = Pipeline(
-            steps=[
-                ('catfeatures', ct),
-                ('clf', LogisticRegression(**CLF_PARAMS))
-                ]
-            )
+    pipe_ = make_pipeline(
+        ct,
+        LogisticRegression(**CLF_PARAMS)
+        )
 
     @staticmethod
     def logit(ps_score):

@@ -10,9 +10,9 @@ class ObsMatcher:
             Parameters
             ----------
             n_matches : int
-                set the number of n controls for each minor class (intervention group)
+                label_col the number of n controls for each minor class (intervention group)
             caliper : float
-                set the minimal distance for matching between intervention and control
+                label_col the minimal distance for matching between intervention and control
             :return
                 matched Dataframe
         """

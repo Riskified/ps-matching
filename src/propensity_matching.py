@@ -24,8 +24,8 @@ class PrepData:
         data: DataFrame = read_csv(file_path, index_col=index_col)
         self.input: DataFrame = data.drop([group, target], axis=1)
         print(f'loaded data with {len(data)} observations')
-        self.group_label = self.create_group_label(data[group])
-        self.target_label = self.create_group_label(data[target])
+        self.group_label: Series = self.create_group_label(data[group])
+        self.target_label: Series = self.create_group_label(data[target])
 
     @staticmethod
     def get_minority_class(label_col) -> str:
@@ -73,6 +73,6 @@ class PScorer(BaseEstimator):
         return self
 
     def predict(self, X):
-        check_is_fitted(self)
+        # check_is_fitted(self)
         ps_score = self.pipe_.predict_proba(X)[:, 1]
         return self.logit(ps_score)

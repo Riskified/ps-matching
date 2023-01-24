@@ -7,16 +7,15 @@ from seaborn import barplot
 from sklearn import metrics
 
 
-class SimilarObs:
+class ScorePlotter:
     def __init__(self, matched_data: DataFrame):
         self.matched_data = matched_data
-    def plot_roc_curve(self):
 
-        data_with_preds = self.get_propensity_score()
+    def plot_roc_curve(self, preds, y_true):
         # calculate the fpr and tpr for all thresholds of the classification
-        preds = data_with_preds['propensity_score']
-        y_true = data_with_preds[self.group]
-        fpr, tpr, threshold = metrics.roc_curve(y_true, preds, pos_label=self.minority_class_in_group)
+        # preds = data_with_preds['propensity_score']
+        # y_true = data_with_preds[group]
+        fpr, tpr, threshold = metrics.roc_curve(y_true, preds, True)
         roc_auc = metrics.auc(fpr, tpr)
 
         # method I: plt
@@ -47,34 +46,34 @@ class SimilarObs:
         d = (mean_treated - mean_untreated) \
             / math.sqrt \
                 (((count_treated
-                    - 1) * std_treated ** 2 + (count_untreated - 1) * std_untreated ** 2) /
+                   - 1) * std_treated ** 2 + (count_untreated - 1) * std_untreated ** 2) /
                  (count_treated +
-                    count_untreated - 2
-                     )
-                    )
+                  count_untreated - 2
+                  )
+                 )
         return round(d, 3)
 
-    def plot_smd_comparison(self, cols, sns=None):
+    def plot_smd_comparison(self, cols, logical_column_name, sns=None):
         smd_data = []
         for cl in cols:
             smd_data.append \
-                (
-                    [cl, 'before_match', self.calculate_smd
                     (
+                    [cl, 'before_match', self.calculate_smd
+                        (
                         data=self.data,
                         col_name=cl,
                         treatment_name=self.logical_column_name
                     )
-            ])
+                     ])
             smd_data.append \
-                (
-                    [cl, 'after_match', self.calculate_smd
                     (
+                    [cl, 'after_match', self.calculate_smd
+                        (
                         data=self.matched_data,
                         col_name=cl,
                         treatment_name=self.logical_column_name
                     )
-            ])
+                     ])
 
             res = DataFrame(smd_data, columns=['variable', 'matching', 'mean_difference'])
 

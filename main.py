@@ -1,20 +1,28 @@
 import pandas as pd
 
+from src.plots import ScorePlotter
 from src.propensity_matching import PrepData, PScorer
 from src.find_similarities import ObsMatcher
 
-CAT_FEATURES = ['target', 'order_total_spent', 'credit_card_type', 'credit_card_company', 'model_score_category']
 PS_GROUP = 'acquirer'
 TARGET = 'target'
+FILE_PATH = 'data/df.csv'
 
 if __name__ == "__main__":
-    data = PrepData('data/df.csv', group=PS_GROUP, target="target",  index_col="id")
-    scorer = PScorer() # categorical_columns=CAT_FEATURES
+    # load data
+    data = PrepData(FILE_PATH, group=PS_GROUP, target="target",  index_col="id")
+
+    # calculate ps scores
+    scorer = PScorer()
     scorer.fit(data.input, data.group_label)
     propensity_scores = scorer.predict(data.input)
+    ps_scores = pd.Series(propensity_scores, data.input.index)
 
+    # check ps scores in roc curve
+    plotter = ScorePlotter(data)
+    plotter.plot_roc_curve(ps_scores, data.group_label)
 
-
-    temp = pd.Series(propensity_scores, data.input.index)
+    # match scores between groups
     matcher = ObsMatcher(n_matches=1, caliper=0.001)
-    matcher.match_scores(temp, data.group_label)
+    matcher.match_scores(ps_scores, data.group_label)
+    plotter.plot_smd_comparison(cols=data.input.columns.to_list()) # data.input, data.input.columns.to_list(), PS_GROUP

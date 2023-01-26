@@ -26,6 +26,29 @@ class ObsMatcher:
 
         result, match_ids = [], []
         print('starting matching process, this might take a time')
+        for index, score in intervention_group.items():
+            matches: Series = abs(control_group - score).sort_values()
+            in_caliper: Series = matches <= self.caliper
+            matches_in_caliper: Series = matches[in_caliper]
+            matches_in_caliper_n = matches_in_caliper.head(self.n_matches)
+            if len(matches_in_caliper_n) == 0:
+                continue
+
+            if len(matches_in_caliper_n) < self.n_matches:
+                select: int = len(matches_in_caliper_n)
+            else:
+                select: int = self.n_matches
+
+            chosen = random.choice(matches_in_caliper_n.index, min(select, self.n_matches), replace=False)
+
+            result.extend([intervention_group.index[i]] + list(chosen))
+            match_ids.extend([i] * (len(chosen) + 1))
+            control_group = control_group.drop(index=chosen)
+
+
+
+
+
 
         for i in tqdm(range(len(intervention_group))):
             score = intervention_group.iloc[i]
@@ -44,8 +67,10 @@ class ObsMatcher:
                 select: int = self.n_matches
 
             chosen = random.choice(matches_in_caliper_n.index, min(select, self.n_matches), replace=False)
+
             result.extend([intervention_group.index[i]] + list(chosen))
             match_ids.extend([i] * (len(chosen) + 1))
+            control_group.drop(index=chosen, inplace=True)
 
         matched_data = p_scores.loc[result]
         matched_data['match_id'] = match_ids

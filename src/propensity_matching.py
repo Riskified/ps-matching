@@ -1,4 +1,5 @@
-from typing import List
+from random import random
+from typing import List, Union
 from numpy import log
 from pandas import DataFrame, Series, concat, read_csv
 from sklearn.base import BaseEstimator
@@ -14,29 +15,6 @@ CLF_PARAMS = {
     "penalty": "l2",
     "max_iter": 1000
     }
-
-
-class PrepData:
-    group_label = Series(dtype=bool)
-    target_label = Series(dtype=bool)
-
-    def __init__(self, file_path: str, group: str, target: str, index_col: str):
-        data: DataFrame = read_csv(file_path, index_col=index_col)
-        self.input: DataFrame = data.drop([group, target], axis=1)
-        print(f'loaded data with {len(data)} observations')
-        self.group_label: Series = self.create_group_label(data[group])
-        self.target_label: Series = self.create_group_label(data[target])
-
-    @staticmethod
-    def get_minority_class(label_col) -> str:
-        return label_col.value_counts().tail(1).index[0]
-
-    @staticmethod
-    def create_group_label(label: Series):
-        logical_label: Series = label == PrepData.get_minority_class(label)
-        print(logical_label.value_counts(normalize=True))
-        print(f'The minority class contains {(logical_label == True).sum()} observations')
-        return logical_label
 
 
 class PScorer(BaseEstimator):
@@ -68,11 +46,12 @@ class PScorer(BaseEstimator):
     def logit(ps_score):
         return log(ps_score / (1 - ps_score))
 
-    def fit(self, X, y):
+    def fit(self, X: DataFrame, y: Series):
+        check_is_fitted(self, "pipe_")
         self.pipe_.fit(X, y)
         return self
 
-    def predict(self, X):
-        # check_is_fitted(self)
+    def predict(self, X: DataFrame) -> Series:
+        check_is_fitted(self, "pipe_")
         ps_score = self.pipe_.predict_proba(X)[:, 1]
-        return self.logit(ps_score)
+        return Series(self.logit(ps_score), X.index)

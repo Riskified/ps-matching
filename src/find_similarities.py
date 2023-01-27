@@ -23,24 +23,24 @@ class ObsMatcher:
 
         intervention_group: Series = p_scores[label]
         control_group: Series = p_scores[~label]
-
-        match_idss = {}
+        len(control_group) # 38708
+        match_ids = {}
         print('starting matching process, this might take a time')
-        popi = intervention_group.head(4)  # .items()
-        for index, score in tqdm(popi.items()):  # intervention_group.items()
-            matches: Series = abs(control_group - score).sort_values()
 
-            in_caliper: Series = matches <= self.caliper
-            matches_in_caliper: Series = matches[in_caliper]
-            matches_in_caliper_n = matches_in_caliper.head(self.n_matches)
-            if len(matches_in_caliper_n) == 0:
-                break
-            select: int = min(len(matches_in_caliper_n), self.n_matches)
-            chosen = random.choice(matches_in_caliper.index, select, replace=False)
-            match_idss.append({index: list(chosen)})
-            control_group = control_group.drop(index=chosen)
+        for index, score in tqdm(intervention_group.items(), total=len(intervention_group)):
+            matches: Series = abs(control_group - score)
+            matches_in_caliper: Series = matches[matches <= self.caliper]
+            select: int = min(len(matches_in_caliper), self.n_matches)
+            if select > 0:
+                chosen = random.choice(matches_in_caliper.index, select, replace=False).tolist()
+                match_ids.update({index: chosen})
+                control_group = control_group.drop(index=chosen)
 
-        matched_ids = DataFrame(match_idss)
+        len(control_group)
+        len(p_scores[~label])
+        random.choice(matches_in_caliper.index, select, replace=False)
+
+        matched_ids = DataFrame(match_ids)
         print(
             f'please note:'
             f'the matched dataset contains {matched_ids.index.isin(label).sum()} observations from minority class'

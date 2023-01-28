@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from numpy import random
 from pandas import DataFrame, Series
 from tqdm import tqdm
@@ -19,30 +21,28 @@ class ObsMatcher:
         self.n_matches = n_matches
         self.caliper = caliper
 
-    def match_scores(self, p_scores: DataFrame, label):
+    def create_matches_table(self, match_ids: Dict[str, str]) -> DataFrame:
+        col_names = [f"matched_{i}" for i in range(1, self.n_matches + 1)]
+        print(
+            f'please note:'
+            f'the matched dataset contains {len(match_ids)} observations from minority class'
+            )
+        return DataFrame(match_ids.values(), index=match_ids.keys(), columns=col_names)
 
-        intervention_group: Series = p_scores[label]
+    def match_scores(self, p_scores: Series, label: Series) -> List[int]:
+        intervention_group: Series = p_scores[label].sample(frac=1)
         control_group: Series = p_scores[~label]
-        len(control_group) # 38708
         match_ids = {}
         print('starting matching process, this might take a time')
-
         for index, score in tqdm(intervention_group.items(), total=len(intervention_group)):
             matches: Series = abs(control_group - score)
             matches_in_caliper: Series = matches[matches <= self.caliper]
             select: int = min(len(matches_in_caliper), self.n_matches)
             if select > 0:
-                chosen = random.choice(matches_in_caliper.index, select, replace=False).tolist()
+                chosen: List[int] = random.choice(matches_in_caliper.index, select, replace=False).tolist()
                 match_ids.update({index: chosen})
-                control_group = control_group.drop(index=chosen)
+                control_group: Series = control_group.drop(index=chosen)
 
-        len(control_group)
-        len(p_scores[~label])
-        random.choice(matches_in_caliper.index, select, replace=False)
+        matched_table: DataFrame = self.create_matches_table(match_ids)
+        return matched_table.reset_index().melt()["value"].to_list()
 
-        matched_ids = DataFrame(match_ids)
-        print(
-            f'please note:'
-            f'the matched dataset contains {matched_ids.index.isin(label).sum()} observations from minority class'
-            )
-        return matched_ids

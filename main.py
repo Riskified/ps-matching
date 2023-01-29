@@ -1,6 +1,6 @@
 from typing import List
 
-from pandas import DataFrame, Series
+from pandas import Series
 from src.plots import ScorePlotter
 from src.prepare_data import PrepData
 from src.propensity_matching import PScorer
@@ -26,4 +26,3 @@ if __name__ == "__main__":
         matched_index=matched_index,
         treatment=data.group_label
         )
-

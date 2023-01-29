@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from numpy import random
 from pandas import DataFrame, Series
@@ -21,8 +21,8 @@ class ObsMatcher:
         self.n_matches = n_matches
         self.caliper = caliper
 
-    def create_matches_table(self, match_ids: Dict[str, str]) -> DataFrame:
-        col_names = [f"matched_{i}" for i in range(1, self.n_matches + 1)]
+    def create_matches_table(self, match_ids: Dict[str, List[int, Any]]) -> DataFrame:
+        col_names: List[str] = [f"matched_{i}" for i in range(1, self.n_matches + 1)]
         print(
             f'please note:'
             f'the matched dataset contains {len(match_ids)} observations from minority class'
@@ -30,7 +30,7 @@ class ObsMatcher:
         return DataFrame(match_ids.values(), index=match_ids.keys(), columns=col_names)
 
     def match_scores(self, p_scores: Series, label: Series) -> List[int]:
-        intervention_group: Series = p_scores[label].sample(frac=1)
+        intervention_group: Series = p_scores[label]
         control_group: Series = p_scores[~label]
         match_ids = {}
         print('starting matching process, this might take a time')
@@ -45,4 +45,3 @@ class ObsMatcher:
 
         matched_table: DataFrame = self.create_matches_table(match_ids)
         return matched_table.reset_index().melt()["value"].to_list()
-

@@ -28,6 +28,8 @@ if __name__ == "__main__":
         treatment=data.group_label
         )
 
+    matched_data = data.input[data.input.index.isin(matched_index)].join(data.target_label).join(data.group_label)
+
 
 
 

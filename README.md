@@ -9,7 +9,7 @@ TARGET = 'target'         # set the target variable, the outcome of interest
 FILE_PATH = 'data/df.csv' # dataframe contains all dependant and independent variables
 ```
 
-## DataPrep Class initiation:
+## PrepData Class initiation:
 ```
 data = PrepData(FILE_PATH, group=PS_GROUP, target=TARGET,  index_col="id")
 ```
@@ -21,12 +21,12 @@ scorer.fit(data.input, data.group_label)
 ps_scores: Series = scorer.predict(data.input)
 ```
 
-## Get ROC curve to asses model fit:
+## Get ROC curve to assess model fit:
 ```
 ScorePlotter.plot_roc_curve(ps_scores, data.group_label) 
 ```
 
-## initate the ObsMatcher class, set the matching ratio and the caliper:
+## Initiate the ObsMatcher class, set the matching ratio and the caliper:
 ```
 matcher = ObsMatcher(n_matches=1, caliper=0.001)
 matched_index: List[int] = matcher.match_scores(ps_scores, data.group_label) 

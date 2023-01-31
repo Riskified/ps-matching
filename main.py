@@ -1,5 +1,6 @@
 from typing import List
 
+import pandas as pd
 from pandas import Series
 from src.plots import ScorePlotter
 from src.prepare_data import PrepData
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     ps_scores: Series = scorer.predict(data.input)
     ScorePlotter.plot_roc_curve(ps_scores, data.group_label)
 
-    matcher = ObsMatcher(n_matches=1, caliper=0.001)
+    matcher = ObsMatcher(n_matches=2, caliper=0.001)
     matched_index: List[int] = matcher.match_scores(ps_scores, data.group_label)
 
     ScorePlotter.plot_smd_comparison(
@@ -26,3 +27,8 @@ if __name__ == "__main__":
         matched_index=matched_index,
         treatment=data.group_label
         )
+
+    matched_data = data.input[data.input.index.isin(matched_index)].join(data.target_label).join(data.group_label)
+
+
+

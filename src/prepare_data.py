@@ -1,11 +1,12 @@
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 from pandas import DataFrame, Series, read_csv
 
 
 class PrepData:
     group_label = Series(dtype=bool)
+    group_map = Dict
     target_label = Series(dtype=bool)
-
+    target_map = Dict
     def __init__(self, file_path: str, group: Union[str, List], target: Union[str, List], index_col: str):
         """
             PScorer Class -- creates balanced dataset using propensity score matching
@@ -36,8 +37,7 @@ class PrepData:
         return label_col.value_counts().tail(1).index[0]
 
     @staticmethod
-    def transform_to_boolean(label: Series, minority_class: str = None):
-        condition = minority_class if minority_class is not None else PrepData.get_minority_class(label)
+    def transform_to_boolean(label: Series, condition: str = None):
         logical_label: Series = label == condition
         print(logical_label.value_counts(normalize=True))
         print(f'The minority class contains {(logical_label == True).sum()} observations')
@@ -50,6 +50,7 @@ class PrepData:
     def create_labels(self, group: Union[str, List[str]], target: Union[str, List[str]]):
         for label in ["group", "target"]:
             name, minority_class = self.get_label_name(locals().get(label))
-            label_data: Series = self.transform_to_boolean(self.input[name], minority_class)
+            condition = minority_class if minority_class is not None else PrepData.get_minority_class(self.input[name])
+            label_data: Series = self.transform_to_boolean(self.input[name], condition)
             setattr(self, f"{label}_label", label_data)
             self.input.drop([name], axis=1, inplace=True)

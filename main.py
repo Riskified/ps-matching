@@ -19,7 +19,7 @@ if __name__ == "__main__":
     ps_scores: Series = scorer.predict(data.input)
     ScorePlotter.plot_roc_curve(ps_scores, data.group_label)
 
-    matcher = ObsMatcher(n_matches=2, caliper=0.001)
+    matcher = ObsMatcher(n_matches=1, caliper=0.001)
     matched_index: List[int] = matcher.match_scores(ps_scores, data.group_label)
 
     ScorePlotter.plot_smd_comparison(

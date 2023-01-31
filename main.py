@@ -1,5 +1,6 @@
 from typing import List
 
+import pandas as pd
 from pandas import Series
 from src.plots import ScorePlotter
 from src.prepare_data import PrepData
@@ -26,3 +27,10 @@ if __name__ == "__main__":
         matched_index=matched_index,
         treatment=data.group_label
         )
+
+    matched_data = data.input[data.input.index.isin(matched_index)].join(data.target_label).join(data.group_label)
+
+
+
+
+

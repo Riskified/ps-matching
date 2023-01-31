@@ -21,7 +21,7 @@ class ObsMatcher:
         self.n_matches = n_matches
         self.caliper = caliper
 
-    def create_matches_table(self, match_ids: Dict[str, List[int, Any]]) -> DataFrame:
+    def create_matches_table(self, match_ids: Dict[str, List[Any]]) -> DataFrame:
         col_names: List[str] = [f"matched_{i}" for i in range(1, self.n_matches + 1)]
         print(
             f'please note:'

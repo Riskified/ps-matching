@@ -9,7 +9,7 @@ TARGET = 'target'         # set the target variable, the outcome of interest
 FILE_PATH = 'data/df.csv' # dataframe contains all dependant and independent variables
 ```
 
-## DataPrep Class initiation:
+## PrepData Class initiation:
 ```
 data = PrepData(FILE_PATH, group=PS_GROUP, target=TARGET,  index_col="id")
 ```

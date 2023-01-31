@@ -1,16 +1,43 @@
 # ps-matching
 python class to perform propensity score matching
 
-# How to Use the class:
-## Class initiation:
-match_init = PsMatch(data=df, group='the matching group', minority_class_in_group='the group minority', categorical_columns=[list of categorical columns])
+# How to Use the ps-matching code:
+## Set global variables:
+```
+PS_GROUP = 'treatment'    # set the group variable (treatment/control)
+TARGET = 'target'         # set the target variable, the outcome of interest
+FILE_PATH = 'data/df.csv' # dataframe contains all dependant and independent variables
+```
 
-## Create matched dataset:
-match_data = match_init.create_match_df(nmatches=1, caliper=0.001)
+## DataPrep Class initiation:
+```
+data = PrepData(FILE_PATH, group=PS_GROUP, target=TARGET,  index_col="id")
+```
+
+## initiate the PScorer and estimate the Propensity Score:
+```
+scorer = PScorer()
+scorer.fit(data.input, data.group_label)
+ps_scores: Series = scorer.predict(data.input)
+```
 
 ## Get ROC curve to asses model fit:
-match_init.plot_roc_curve()
+```
+ScorePlotter.plot_roc_curve(ps_scores, data.group_label) 
+```
+
+## initate the ObsMatcher class, set the matching ratio and the caliper:
+```
+matcher = ObsMatcher(n_matches=1, caliper=0.001)
+matched_index: List[int] = matcher.match_scores(ps_scores, data.group_label) 
+```
 
 ## Plot SMD before and after matching:
-init.plot_smd_comparison(cols=[list of columns to compere])
+```
+ ScorePlotter.plot_smd_comparison(
+        data=data.input,
+        matched_index=matched_index,
+        treatment=data.group_label
+        )
+```
 
